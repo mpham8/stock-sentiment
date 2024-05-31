@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 import requests
 from newspaper import Article
+from transformers import pipeline
+
 
 class News:
   def __init__(self, ticker, articles):
@@ -76,9 +78,25 @@ class News:
 
     return news_text_ls
 
+
+class SentimentAnal:
+  def __init__(self, news_text_ls):
+    self.news_text_ls = news_text_ls
+  def get_sentiment_analysis(self):
+    
+    #if more 500 tokens
+      #split into 500 token chunks
+      #run pipeline seperately
+      #get average
+    
+    
+    pass
+  
+
 stock_news = News("RIVN", 10)
 news_text_ls = stock_news.get_news_txt()
-print(news_text_ls)
+# print(news_text_ls)
+stock_news = SentimentAnal(news_text_ls)
 
 #Structure:
 #initialize sentiment analysis model locally on website load
