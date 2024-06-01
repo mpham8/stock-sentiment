@@ -7,6 +7,7 @@ from transformers import AutoModelForSequenceClassification
 from transformers import AutoTokenizer, AutoConfig
 from scipy.special import softmax
 import numpy as np
+import yfinance as yf
 
 
 
@@ -139,17 +140,150 @@ class SentimentAnal:
     print(f"negative articles: {negative_count}, neutral articles: {neutral_count}, positive articles: {positive_count}")
 
     
+    #mixed
+
+    #postive
+
+    #negative
+
+    #neutral
+
     return
+
+
+class TechnicalIndicators:
+  def __init__(self, ticker):
+    self.ticker = ticker
+    
+    # Fetch data from Yahoo Finance
+    self.data_15m = yf.download(self.ticker, period="1d", interval="15m")  # For day trading (15-minute interval)
+    self.data_daily = yf.download(self.ticker, period="1mo", interval="1d")  # For swing trading (daily interval)
+    self.data_weekly = yf.download(self.ticker, period="1y", interval="1wk")  # For long term trading (weekly interval)
+      
+
+    return 
   
 
-stock_news = News("RIVN", 10)
-news_text_ls = stock_news.get_news_txt()
-sentiment = SentimentAnal()
-cum_array = sentiment.get_sentiment_analysis(news_text_ls)
-sentiment.analyze_sentiment_score(cum_array)
+  def get_rsi(self): 
+    """
+    day trade - 14 period 15 min
+    swing trade - 14 period 1 day
+    long term - 21 period 1 week
 
-#Structure:
-#initialize sentiment analysis model locally on website load
-#News class (for each ticker) -> return all the news txt
-#run in the model
+    over 70 - overbought
+    under 30 - oversold
+    """
+
+    # Function to calculate RSI
+    def calculate_rsi(data, period):
+        delta = data['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        return rsi
+
+    # Calculate RSI for each timeframe
+    self.data_15m['RSI_14_15m'] = calculate_rsi(self.data_15m, 14)  # Day trading
+    self.data_daily['RSI_14_1d'] = calculate_rsi(self.data_daily, 14)  # Swing trading
+    self.data_weekly['RSI_21_1w'] = calculate_rsi(self.data_weekly, 21)  # Long term trading
+
+
+    day_rsi = round(self.data_15m['RSI_14_15m'].dropna().iloc[-1], 2)
+    swing_rsi = round(self.data_daily['RSI_14_1d'].dropna().iloc[-1], 2)
+    long_rsi = round(self.data_weekly['RSI_21_1w'].dropna().iloc[-1], 2)
+
+
+    # Display the most recent RSI values for each timeframe
+    rsi_values = {
+        "Day": day_rsi,
+        "Swing": swing_rsi,
+        "Long": long_rsi
+    }
+
+    rsi_trends = {}
+    for key in rsi_values:
+      if rsi_values[key] >= 70:
+        rsi_trends[key] = "overbought"
+      elif rsi_values[key] <= 30:
+        rsi_trends[key] = "oversold"
+      else:
+        rsi_trends[key] = "neutral"
+
+    return rsi_values, rsi_trends
+  
+
+  def get_macd(self):
+      """
+      Fetches stock data from Yahoo Finance and calculates the MACD indicator.
+      
+      Parameters:
+      - ticker: str, the stock ticker symbol.
+      - start_date: str, the start date for the data in 'YYYY-MM-DD' format.
+      - end_date: str, the end date for the data in 'YYYY-MM-DD' format.
+      - slow: int, the period for the slow EMA.
+      - fast: int, the period for the fast EMA.
+      - signal: int, the period for the signal line.
+      
+      Returns:
+      - str, "Overbought", "Oversold", or "Neutral" based on MACD analysis.
+      """
+
+      # Function to calculate macd
+      def calculate_macd(data, period):
+        slow, fast, signal = 26, 12, 9
+        exp1 = data['Close'].ewm(span=fast, adjust=False).mean()
+        exp2 = data['Close'].ewm(span=slow, adjust=False).mean()
+        macd = exp1 - exp2
+        signal_line = macd.ewm(span=signal, adjust=False).mean()
+        macd_diff = macd - signal_line
+        return macd_diff
+
+      # Calculate RSI for each timeframe
+      self.data_15m['MACD_14_15m'] = calculate_macd(self.data_15m, 14)  # Day trading
+      self.data_daily['MACD_14_1d'] = calculate_macd(self.data_daily, 14)  # Swing trading
+      self.data_weekly['MACD_21_1w'] = calculate_macd(self.data_weekly, 21)  # Long term trading
+      
+      day_macd = round(self.data_15m['MACD_14_15m'].dropna().iloc[-1], 2)
+      swing_macd = round(self.data_daily['MACD_14_1d'].dropna().iloc[-1], 2)
+      long_macd = round(self.data_weekly['MACD_21_1w'].dropna().iloc[-1], 2)
+      # Display the most recent RSI values for each timeframe
+      macd_values = {
+        "Day": day_macd,
+        "Swing": swing_macd,
+        "Long": long_macd
+      }
+      # # Determine if the stock is overbought or oversold
+      # if macd_diff.iloc[-1] > 0 and macd_diff.diff().iloc[-1] > 0:
+      #     return "Overbought"
+      # elif macd_diff.iloc[-1] < 0 and macd_diff.diff().iloc[-1] < 0:
+      #     return "Oversold"
+      # else:
+      #     return "Neutral"
+
+      macd_trends = {}
+      for key in macd_values:
+        if macd_values[key] > 0:
+          macd_trends[key] = "overbought"
+        elif macd_values[key] < 0:
+          macd_trends[key] = "oversold"
+        else:
+          macd_trends[key] = "neutral"
+
+      return macd_values, macd_trends
+
+# stock_news = News("AAPL", 10)
+# news_text_ls = stock_news.get_news_txt()
+# sentiment = SentimentAnal()
+# cum_array = sentiment.get_sentiment_analysis(news_text_ls)
+# sentiment.analyze_sentiment_score(cum_array)
+stock = TechnicalIndicators("RIVN")
+rsi, rsi2 = stock.get_rsi()
+macd, macd2 = stock.get_macd()
+print("RSI")
+print(rsi)
+print(rsi2)
+print("MACD")
+print(macd)
+print(macd2)
 
