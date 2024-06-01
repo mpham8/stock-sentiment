@@ -141,12 +141,25 @@ class SentimentAnal:
 
     
     #mixed
+    #mostly postive - more than half positive
+    #mostly negative - more than half negative
+    #neutral - more than half neutral
+    p_neg = average_array[0]/len(cum_array)
+    p_nuet = average_array[1]/len(cum_array)
+    p_pos = average_array[2]/len(cum_array)
 
-    #postive
+    sentiment = "mixed"
+    if p_pos > 0.5:
+      sentiment = "positive"
+    elif p_neg > 0.5:
+      sentiment = "negative"
+    elif p_nuet > 0.5:
+      sentiment = "nuetral"
 
-    #negative
+    print(f"sentiment is {sentiment}")
 
-    #neutral
+
+
 
     return
 
@@ -272,18 +285,20 @@ class TechnicalIndicators:
 
       return macd_values, macd_trends
 
-# stock_news = News("AAPL", 10)
-# news_text_ls = stock_news.get_news_txt()
-# sentiment = SentimentAnal()
-# cum_array = sentiment.get_sentiment_analysis(news_text_ls)
-# sentiment.analyze_sentiment_score(cum_array)
-stock = TechnicalIndicators("RIVN")
-rsi, rsi2 = stock.get_rsi()
-macd, macd2 = stock.get_macd()
-print("RSI")
-print(rsi)
-print(rsi2)
-print("MACD")
-print(macd)
-print(macd2)
+stock_news = News("AAPL", 25)
+news_text_ls = stock_news.get_news_txt()
+sentiment = SentimentAnal()
+cum_array = sentiment.get_sentiment_analysis(news_text_ls)
+sentiment.analyze_sentiment_score(cum_array)
+  
+
+# stock = TechnicalIndicators("RIVN")
+# rsi, rsi2 = stock.get_rsi()
+# macd, macd2 = stock.get_macd()
+# print("RSI")
+# print(rsi)
+# print(rsi2)
+# print("MACD")
+# print(macd)
+# print(macd2)
 
