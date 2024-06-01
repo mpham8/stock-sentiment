@@ -3,13 +3,18 @@ from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 import requests
 from newspaper import Article
-from transformers import pipeline
+from transformers import AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoConfig
+from scipy.special import softmax
+import numpy as np
+
 
 
 class News:
   def __init__(self, ticker, articles):
     self.ticker = ticker
     self.articles = articles
+    
 
   def get_news_txt(self):
     """
@@ -80,23 +85,46 @@ class News:
 
 
 class SentimentAnal:
-  def __init__(self, news_text_ls):
-    self.news_text_ls = news_text_ls
-  def get_sentiment_analysis(self):
+  def __init__(self):
+
+    MODEL = f"cardiffnlp/twitter-roberta-base-sentiment-latest"
+    MODEL = "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis"
+    self.tokenizer = AutoTokenizer.from_pretrained(MODEL)
+    self.config = AutoConfig.from_pretrained(MODEL)
+    self.model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+  
+  def get_sentiment_analysis(self, news_text_ls):
+    pos_score_ls, neg_score_ls, neut_score_ls = [], [], []
+    for text in news_text_ls:
+      tokens = self.tokenizer.tokenize(text)
+      chunks = []
+
+      for i in range(0, len(tokens), 500):
+        chunk = tokens[i:i + 500]
+        chunks.append(self.tokenizer.convert_tokens_to_string(chunk))
+
+      cum_array = np.array([0,0,0], dtype=np.float64)      
+      for chunk in chunks:
+        encoded_input = self.tokenizer(chunk, return_tensors='pt', padding=True, truncation=True)
+        output = self.model(**encoded_input)
+        scores = output.logits[0].detach().numpy()
+        scores = softmax(scores)
+        cum_array += scores
+        
+      avr_array = cum_array/len(chunks)
+      print(avr_array)
+      neg_score_ls.append(avr_array[0])
+      neut_score_ls.append(avr_array[1])
+      pos_score_ls.append(avr_array[2])
     
-    #if more 500 tokens
-      #split into 500 token chunks
-      #run pipeline seperately
-      #get average
-    
-    
-    pass
+    return
   
 
 stock_news = News("RIVN", 10)
 news_text_ls = stock_news.get_news_txt()
 # print(news_text_ls)
-stock_news = SentimentAnal(news_text_ls)
+sentiment = SentimentAnal()
+sentiment.get_sentiment_analysis(news_text_ls)
 
 #Structure:
 #initialize sentiment analysis model locally on website load
