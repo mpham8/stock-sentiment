@@ -87,14 +87,13 @@ class News:
 class SentimentAnal:
   def __init__(self):
 
-    MODEL = f"cardiffnlp/twitter-roberta-base-sentiment-latest"
     MODEL = "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis"
     self.tokenizer = AutoTokenizer.from_pretrained(MODEL)
     self.config = AutoConfig.from_pretrained(MODEL)
     self.model = AutoModelForSequenceClassification.from_pretrained(MODEL)
   
   def get_sentiment_analysis(self, news_text_ls):
-    pos_score_ls, neg_score_ls, neut_score_ls = [], [], []
+    cum_scores_ls = []
     for text in news_text_ls:
       tokens = self.tokenizer.tokenize(text)
       chunks = []
@@ -112,19 +111,42 @@ class SentimentAnal:
         cum_array += scores
         
       avr_array = cum_array/len(chunks)
-      print(avr_array)
-      neg_score_ls.append(avr_array[0])
-      neut_score_ls.append(avr_array[1])
-      pos_score_ls.append(avr_array[2])
+      cum_scores_ls.append(avr_array)
+
+    
+    return np.array(cum_scores_ls)
+  
+
+  def analyze_sentiment_score(self, cum_array):
+    average_array = np.mean(cum_array, axis=0)
+    print(cum_array)
+    print(average_array)
+
+
+    negative_count, neutral_count, positive_count = 0, 0, 0
+    for i in range(len(cum_array)):
+      index_highest = np.argmax(cum_array[i])
+      if index_highest == 0:
+        negative_count += 1
+      elif index_highest == 2:
+        positive_count += 1
+      else:
+        neutral_count += 1
+
+
+    print(f"analyzed 10 $RIVN articles and found:")
+    print(f"average sentiment: {round(average_array[0], 2)} negative, {round(average_array[1], 2)} neutral, {round(average_array[2], 2)} positive")
+    print(f"negative articles: {negative_count}, neutral articles: {neutral_count}, positive articles: {positive_count}")
+
     
     return
   
 
 stock_news = News("RIVN", 10)
 news_text_ls = stock_news.get_news_txt()
-# print(news_text_ls)
 sentiment = SentimentAnal()
-sentiment.get_sentiment_analysis(news_text_ls)
+cum_array = sentiment.get_sentiment_analysis(news_text_ls)
+sentiment.analyze_sentiment_score(cum_array)
 
 #Structure:
 #initialize sentiment analysis model locally on website load
